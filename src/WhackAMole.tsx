@@ -19,7 +19,7 @@ const WhackAMole: React.FC = () => {
   useEffect(() => {
     const renderInterval = setInterval(() => {
       forceUpdate({});
-    }, 16); //
+    }, 16);
 
     return () => {
       clearInterval(renderInterval);

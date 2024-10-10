@@ -58,7 +58,7 @@ export class Mole {
         clearTimeout(this.moleTimer);
       }
   
-      const duration = Math.random() * 200 + 200; // Random time between 200ms and 400ms
+      const duration = Math.random() * 200 + 200;
       this.moleTimer = setTimeout(() => {
         if (!this.gameOver) {
           mole.isVisible = false;
@@ -73,23 +73,26 @@ export class Mole {
       const mole = this.moles[index];
       if (mole.isVisible && mole.canBeClicked) {
         const whackTime = Date.now();
-        const reactionTime = whackTime - mole.appearTime;
         
-        if (reactionTime <= 400) {  // Strictly adhere to 400ms max
-          if (whackTime - this.lastWhackTime <= 1000) {
-            this.combo++;
-          } else {
-            this.combo = 1;
-          }
-          this.lastWhackTime = whackTime;
-  
-          this.score += this.combo;
-  
-          mole.canBeClicked = false;
-          mole.justWhacked = true;
-          mole.isVisible = false;
-          return true;
+        if (whackTime - this.lastWhackTime <= 1000) {
+          this.combo++;
+        } else {
+          this.combo = 1;
         }
+        this.lastWhackTime = whackTime;
+  
+        this.score += this.combo;
+  
+        mole.canBeClicked = false;
+        mole.justWhacked = true;
+        mole.isVisible = false;
+        
+        setTimeout(() => {
+          mole.justWhacked = false;
+          this.showRandomMole();
+        }, 200);
+        
+        return true;
       }
       return false;
     }

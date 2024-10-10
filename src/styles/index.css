@@ -65,6 +65,16 @@ body {
     transition: transform 0.1s ease-out;
   }
   
+  .mole-hole.missed {
+    background-color: #FF5252;
+    transition: background-color 0.1s ease-out;
+  }
+  
+  .mole-hole.missed .mole {
+    transform: translateY(0%);
+    transition: transform 0.1s ease-out;
+  }
+  
   .game-info {
     font-size: 18px;
     margin-bottom: 10px;
