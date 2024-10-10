@@ -1,75 +1,62 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { GameEngine, debounce } from './game-engine';
 
 const WhackAMole: React.FC = () => {
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [moles, setMoles] = useState(Array(9).fill(false));
-  const [gameOver, setGameOver] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameEngine] = useState(() => new GameEngine());
+  const [, forceUpdate] = useState({});
+  const gameStarted = useRef(false);
 
-  const showRandomMole = useCallback(() => {
-    if (gameOver || !gameStarted) return;
-    const randomIndex = Math.floor(Math.random() * moles.length);
-    setMoles(prev => prev.map((mole, index) => index === randomIndex));
-    setTimeout(() => setMoles(prev => prev.map(() => false)), Math.random() * 800 + 600);
-  }, [gameOver, gameStarted, moles.length]);
+  const handleWhack = useCallback((index: number) => {
+    if (gameStarted.current && gameEngine.whack(index)) {
+      forceUpdate({});
+    }
+  }, [gameEngine]);
+
+  // Use a short debounce time to prevent accidental double-clicks
+  const debouncedHandleWhack = useCallback(
+    debounce(handleWhack, 100),
+    [handleWhack]
+  );
 
   useEffect(() => {
-    let moleInterval: number;
-    let timerInterval: number;
-
-    if (gameStarted && !gameOver) {
-      moleInterval = window.setInterval(showRandomMole, 1000);
-      timerInterval = window.setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(moleInterval);
-            clearInterval(timerInterval);
-            setGameOver(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    const renderInterval = setInterval(() => {
+      if (gameStarted.current && !gameEngine.gameOver) {
+        forceUpdate({});
+      }
+    }, 50); // Update every 50ms for smoother rendering
 
     return () => {
-      clearInterval(moleInterval);
-      clearInterval(timerInterval);
+      clearInterval(renderInterval);
+      gameEngine.cleanup();
     };
-  }, [showRandomMole, gameStarted, gameOver]);
+  }, [gameEngine]);
 
-  const whackMole = (index: number) => {
-    if (moles[index] && !gameOver && gameStarted) {
-      setScore(prev => prev + 1);
-      setMoles(prev => prev.map((mole, i) => i === index ? false : mole));
-    }
-  };
-
-  const startGame = () => {
-    setScore(0);
-    setTimeLeft(60);
-    setMoles(Array(9).fill(false));
-    setGameOver(false);
-    setGameStarted(true);
-  };
+  const startGame = useCallback(() => {
+    gameEngine.startGame();
+    gameStarted.current = true;
+    forceUpdate({});
+  }, [gameEngine]);
 
   return (
     <div className="game-container">
       <h1>Whack-a-Mole</h1>
-      {gameStarted ? (
+      {gameStarted.current ? (
         <>
-          <div className="game-info">Score: {score}</div>
-          <div className="game-info">Time: {timeLeft}s</div>
+          <div className="game-info">Score: {gameEngine.score}</div>
+          <div className="game-info">Time: {gameEngine.timeLeft}s</div>
           <div className="game-board">
-            {moles.map((mole, index) => (
-              <div key={index} className="mole-hole" onClick={() => whackMole(index)}>
-                <div className={`mole ${mole ? 'visible' : ''}`}></div>
+            {gameEngine.moles.map((mole, index) => (
+              <div 
+                key={index} 
+                className="mole-hole" 
+                onClick={() => debouncedHandleWhack(index)}
+              >
+                <div className={`mole ${mole.isVisible ? 'visible' : ''}`}></div>
               </div>
             ))}
           </div>
-          {gameOver && <div className="game-info">Game Over! Your score: {score}</div>}
-          <button onClick={startGame}>{gameOver ? 'Play Again' : 'Reset Game'}</button>
+          {gameEngine.gameOver && <div className="game-info">Game Over! Your score: {gameEngine.score}</div>}
+          <button onClick={startGame}>{gameEngine.gameOver ? 'Play Again' : 'Reset Game'}</button>
         </>
       ) : (
         <button onClick={startGame}>Start Game</button>

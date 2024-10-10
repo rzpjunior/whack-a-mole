@@ -1,108 +1,113 @@
-export class GameObject {
-    constructor(public x: number, public y: number) {}
-    update(deltaTime: number): void {}
-    render(ctx: CanvasRenderingContext2D): void {}
-  }
-  
-  export class Mole extends GameObject {
+export class Mole {
     isVisible: boolean = false;
-    hideTimeout: number = 0;
-  
-    show(): void {
-      this.isVisible = true;
-      this.hideTimeout = window.setTimeout(() => this.hide(), Math.random() * 200 + 200);
-    }
-  
-    hide(): void {
-      this.isVisible = false;
-      clearTimeout(this.hideTimeout);
-    }
-  
-    render(ctx: CanvasRenderingContext2D): void {
-      if (this.isVisible) {
-        ctx.fillStyle = 'brown';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    appearTime: number = 0;
+    canBeClicked: boolean = true;
   }
   
   export class GameEngine {
-    moles: Mole[] = [];
+    moles: Mole[] = Array(9).fill(null).map(() => new Mole());
     score: number = 0;
-    lastTime: number = 0;
-    timeLimit: number = 60;
-    timeRemaining: number = this.timeLimit;
+    timeLeft: number = 60;
+    gameOver: boolean = false;
+    private moleTimer: NodeJS.Timeout | null = null;
+    private gameInterval: NodeJS.Timeout | null = null;
   
-    constructor(private ctx: CanvasRenderingContext2D) {
-      for (let i = 0; i < 9; i++) {
-        const x = (i % 3) * 100 + 50;
-        const y = Math.floor(i / 3) * 100 + 50;
-        this.moles.push(new Mole(x, y));
-      }
-    }
-  
-    update(currentTime: number): void {
-      const deltaTime = currentTime - this.lastTime;
-      this.lastTime = currentTime;
-      this.timeRemaining -= deltaTime / 1000;
-      if (this.timeRemaining <= 0) this.endGame();
-    }
-  
-    render(): void {
-      this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-      this.moles.forEach((mole, i) => {
-        const x = (i % 3) * 100 + 50;
-        const y = Math.floor(i / 3) * 100 + 50;
-        this.ctx.fillStyle = 'black';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 25, 0, Math.PI * 2);
-        this.ctx.fill();
-        mole.render(this.ctx);
-      });
-      this.ctx.fillStyle = 'black';
-      this.ctx.font = '20px Arial';
-      this.ctx.fillText(`Score: ${this.score}`, 10, 30);
-      this.ctx.fillText(`Time: ${Math.ceil(this.timeRemaining)}s`, 10, 60);
-    }
-  
-    start(): void {
-      const gameLoop = (currentTime: number) => {
-        this.update(currentTime);
-        this.render();
-        if (this.timeRemaining > 0) requestAnimationFrame(gameLoop);
-      };
-      requestAnimationFrame(gameLoop);
-    }
-  
-    showRandomMole(): void {
-      const hiddenMoles = this.moles.filter(mole => !mole.isVisible);
-      if (hiddenMoles.length > 0) {
-        const randomMole = hiddenMoles[Math.floor(Math.random() * hiddenMoles.length)];
-        randomMole.show();
-      }
-    }
-  
-    handleClick(x: number, y: number): void {
-      this.moles.forEach(mole => {
-        const distance = Math.sqrt(Math.pow(x - mole.x, 2) + Math.pow(y - mole.y, 2));
-        if (distance <= 20 && mole.isVisible) {
-          mole.hide();
-          this.score++;
-        }
-      });
-    }
-  
-    endGame(): void {
-      this.timeRemaining = 0;
-      this.moles.forEach(mole => mole.hide());
-    }
-  
-    reset(): void {
+    startGame() {
       this.score = 0;
-      this.timeRemaining = this.timeLimit;
-      this.moles.forEach(mole => mole.hide());
-      this.start();
+      this.timeLeft = 60;
+      this.gameOver = false;
+      this.moles.forEach(mole => {
+        mole.isVisible = false;
+        mole.appearTime = 0;
+        mole.canBeClicked = true;
+      });
+      this.showRandomMole();
+      this.startGameInterval();
     }
+  
+    private startGameInterval() {
+      if (this.gameInterval) {
+        clearInterval(this.gameInterval);
+      }
+      this.gameInterval = setInterval(() => {
+        this.updateTime();
+      }, 1000);
+    }
+  
+    showRandomMole() {
+      if (this.gameOver) return;
+  
+      this.moles.forEach(mole => {
+        mole.isVisible = false;
+        mole.canBeClicked = true;
+      });
+  
+      const randomIndex = Math.floor(Math.random() * this.moles.length);
+      const mole = this.moles[randomIndex];
+      mole.isVisible = true;
+      mole.appearTime = Date.now();
+  
+      if (this.moleTimer) {
+        clearTimeout(this.moleTimer);
+      }
+  
+      const duration = Math.random() * 200 + 200; // Random time between 200ms and 400ms
+      this.moleTimer = setTimeout(() => {
+        mole.isVisible = false;
+        this.showRandomMole();
+      }, duration);
+    }
+  
+    whack(index: number): boolean {
+      if (this.gameOver) return false;
+  
+      const mole = this.moles[index];
+      if (mole.isVisible && mole.canBeClicked) {
+        const whackTime = Date.now();
+        const reactionTime = whackTime - mole.appearTime;
+        
+        if (reactionTime <= 400) {  // Strictly adhere to 400ms max
+          this.score++;
+          mole.canBeClicked = false;  // Prevent multiple clicks
+          return true;
+        }
+      }
+      return false;
+    }
+  
+    updateTime() {
+      if (!this.gameOver) {
+        this.timeLeft--;
+        if (this.timeLeft <= 0) {
+          this.endGame();
+        }
+      }
+    }
+  
+    private endGame() {
+      this.gameOver = true;
+      this.cleanup();
+    }
+  
+    cleanup() {
+      if (this.moleTimer) {
+        clearTimeout(this.moleTimer);
+      }
+      if (this.gameInterval) {
+        clearInterval(this.gameInterval);
+      }
+    }
+  }
+  
+  export function debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout | null = null;
+    return (...args: Parameters<T>) => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(() => func(...args), wait);
+    };
   }
