@@ -8,16 +8,20 @@ export class Mole {
   export class GameEngine {
     moles: Mole[] = Array(9).fill(null).map(() => new Mole());
     score: number = 0;
-    timeLeft: number = 15; // Changed to 15 seconds
+    timeLeft: number = 15;
     gameOver: boolean = true;
+    combo: number = 0;
+    lastWhackTime: number = 0;
     private moleTimer: NodeJS.Timeout | null = null;
     private gameInterval: NodeJS.Timeout | null = null;
   
     startGame() {
       this.cleanup();
       this.score = 0;
-      this.timeLeft = 15; // Changed to 15 seconds
+      this.timeLeft = 15;
       this.gameOver = false;
+      this.combo = 0;
+      this.lastWhackTime = 0;
       this.moles.forEach(mole => {
         mole.isVisible = false;
         mole.appearTime = 0;
@@ -71,16 +75,19 @@ export class Mole {
         const whackTime = Date.now();
         const reactionTime = whackTime - mole.appearTime;
         
-        // Increased the allowed reaction time to make it easier to click
-        if (reactionTime <= 500) {
-          this.score++;
+        if (reactionTime <= 400) {  // Strictly adhere to 400ms max
+          if (whackTime - this.lastWhackTime <= 1000) {
+            this.combo++;
+          } else {
+            this.combo = 1;
+          }
+          this.lastWhackTime = whackTime;
+  
+          this.score += this.combo;
+  
           mole.canBeClicked = false;
           mole.justWhacked = true;
-          mole.isVisible = false; // Hide the mole immediately when whacked
-          if (this.moleTimer) {
-            clearTimeout(this.moleTimer);
-          }
-          setTimeout(() => this.showRandomMole(), 200); // Show next mole after a short delay
+          mole.isVisible = false;
           return true;
         }
       }

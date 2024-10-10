@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GameEngine, debounce } from './game-engine';
 
 const WhackAMole: React.FC = () => {
@@ -11,15 +11,15 @@ const WhackAMole: React.FC = () => {
     }
   }, [gameEngine]);
 
-  const debouncedHandleWhack = useCallback(
-      debounce(handleWhack, 50),
-      [handleWhack]
+  const debouncedHandleWhack = useMemo(() => 
+    debounce(handleWhack, 50),
+    [handleWhack]
   );
 
   useEffect(() => {
     const renderInterval = setInterval(() => {
       forceUpdate({});
-    }, 50);
+    }, 16); //
 
     return () => {
       clearInterval(renderInterval);
@@ -37,6 +37,7 @@ const WhackAMole: React.FC = () => {
       <h1>Whack-a-Mole</h1>
       <div className="game-info">Score: {gameEngine.score}</div>
       <div className="game-info">Time: {gameEngine.timeLeft}s</div>
+      <div className="game-info">Combo: {gameEngine.combo}x</div>
       <div className="game-board">
         {gameEngine.moles.map((mole, index) => (
           <div 
