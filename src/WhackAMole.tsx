@@ -12,8 +12,8 @@ const WhackAMole: React.FC = () => {
   }, [gameEngine]);
 
   const debouncedHandleWhack = useCallback(
-    debounce(handleWhack, 100),
-    [handleWhack]
+      debounce(handleWhack, 50),
+      [handleWhack]
   );
 
   useEffect(() => {
@@ -50,11 +50,11 @@ const WhackAMole: React.FC = () => {
       </div>
       {gameEngine.gameOver && (
         <div className="game-info">
-          {gameEngine.timeLeft === 60 ? "Click 'Start Game' to play!" : `Game Over! Final Score: ${gameEngine.score}`}
+          {gameEngine.timeLeft === 15 ? "Click 'Start Game' to play!" : `Game Over! Final Score: ${gameEngine.score}`}
         </div>
       )}
       <button onClick={startGame}>
-        {gameEngine.gameOver ? (gameEngine.timeLeft === 60 ? 'Start Game' : 'Play Again') : 'Reset Game'}
+        {gameEngine.gameOver ? (gameEngine.timeLeft === 15 ? 'Start Game' : 'Play Again') : 'Reset Game'}
       </button>
     </div>
   );
