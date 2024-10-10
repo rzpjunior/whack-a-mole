@@ -2,17 +2,19 @@ export class Mole {
     isVisible: boolean = false;
     appearTime: number = 0;
     canBeClicked: boolean = true;
+    justWhacked: boolean = false;
   }
   
   export class GameEngine {
     moles: Mole[] = Array(9).fill(null).map(() => new Mole());
     score: number = 0;
     timeLeft: number = 60;
-    gameOver: boolean = false;
+    gameOver: boolean = true;
     private moleTimer: NodeJS.Timeout | null = null;
     private gameInterval: NodeJS.Timeout | null = null;
   
     startGame() {
+      this.cleanup();
       this.score = 0;
       this.timeLeft = 60;
       this.gameOver = false;
@@ -20,17 +22,17 @@ export class Mole {
         mole.isVisible = false;
         mole.appearTime = 0;
         mole.canBeClicked = true;
+        mole.justWhacked = false;
       });
-      this.showRandomMole();
       this.startGameInterval();
+      this.showRandomMole();
     }
   
     private startGameInterval() {
-      if (this.gameInterval) {
-        clearInterval(this.gameInterval);
-      }
       this.gameInterval = setInterval(() => {
-        this.updateTime();
+        if (!this.gameOver) {
+          this.updateTime();
+        }
       }, 1000);
     }
   
@@ -40,6 +42,7 @@ export class Mole {
       this.moles.forEach(mole => {
         mole.isVisible = false;
         mole.canBeClicked = true;
+        mole.justWhacked = false;
       });
   
       const randomIndex = Math.floor(Math.random() * this.moles.length);
@@ -53,8 +56,10 @@ export class Mole {
   
       const duration = Math.random() * 200 + 200; // Random time between 200ms and 400ms
       this.moleTimer = setTimeout(() => {
-        mole.isVisible = false;
-        this.showRandomMole();
+        if (!this.gameOver) {
+          mole.isVisible = false;
+          this.showRandomMole();
+        }
       }, duration);
     }
   
@@ -68,7 +73,8 @@ export class Mole {
         
         if (reactionTime <= 400) {  // Strictly adhere to 400ms max
           this.score++;
-          mole.canBeClicked = false;  // Prevent multiple clicks
+          mole.canBeClicked = false;
+          mole.justWhacked = true;
           return true;
         }
       }
@@ -92,9 +98,11 @@ export class Mole {
     cleanup() {
       if (this.moleTimer) {
         clearTimeout(this.moleTimer);
+        this.moleTimer = null;
       }
       if (this.gameInterval) {
         clearInterval(this.gameInterval);
+        this.gameInterval = null;
       }
     }
   }
